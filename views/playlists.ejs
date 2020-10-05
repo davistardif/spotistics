@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%- include('partials/head.ejs') -%>
+    </head>
+    <body>
+        <div class="jumbotron">
+            <h1>Playlists</h1>
+            <p>Select a playlist to get statistics</p>
+        </div>
+        <div class="container">
+            <div class="row">
+                <% playlists.items.forEach(pl => { %>
+                    <div class="col-sm">
+                        <div class="card" style="width: 18rem">
+                            <img class="card-img-top" src="<%=pl.images[0].url%>">
+                            <div class="card-body">
+                                <h5 class="card-title"><%=pl.name%></h5>
+                                <p class="card-text"><%=pl.tracks.total%> tracks</p>
+                                <a href="/playlist/<%=pl.id%>/tracks" class="btn btn-primary stretched-link">Stats</a>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+        <%- include('partials/foot.ejs') -%>
+    </body>
+</html>
+
