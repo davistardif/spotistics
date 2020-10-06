@@ -34,7 +34,7 @@ function get_token(cookies) {
 
 // homepage
 app.get("/", (req, res) => {
-  res.render("index.ejs");
+  res.render("index.ejs", { session: sessions[req.cookies[authKey]] });
 });
 
 // login to spotify
@@ -74,7 +74,8 @@ app.get(constants.REDIRECT_PATH, async (req, res) => {
                                   });
   const authCookie = randomString(35);
   res.cookie(authKey, authCookie);
-  new Session(authCookie, body.access_token, body.refresh_token);
+  const s = new Session(authCookie, body.access_token, body.refresh_token);
+  await s.init();
   res.redirect("/"); 
 });
 
@@ -88,7 +89,7 @@ app.get('/playlists', async (req, res) => {
     headers: { 'Authorization': 'Bearer ' + access_token },
     responseType: 'json'
   });
-  res.render('playlists', { playlists: body });
+  res.render('playlists', { session: sessions[req.cookies[authKey]], playlists: body });
 });
 
 // Show tracks in a given playlist
