@@ -79,6 +79,13 @@ app.get(constants.REDIRECT_PATH, async (req, res) => {
   res.redirect("/"); 
 });
 
+// Logout -- clears our cookie, doesn't log user out of spotify
+app.get('/logout', (req, res) => {
+  delete sessions[req.cookies[authKey]];
+  res.clearCookie(authKey);
+  res.redirect('/');
+});
+
 // show a list of users playlists TODO: add pagination
 app.get('/playlists', async (req, res) => {
   const access_token = get_token(req.cookies);
