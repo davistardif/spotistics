@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%- include('partials/head.ejs') -%>
+    </head>
+    <body>
+        <div class="jumbotron" >
+            <table id="track-table" class="table">
+            </table>
+        </div>
+        
+        <script>
+         var trackTable = document.getElementById("track-table");
+         var tracks = <%- JSON.stringify(tracks) %>;
+         var fields = Object.keys(tracks[0]);
+         window.onload = function() {
+             tracks.forEach(track => {
+                 var row = trackTable.insertRow(0);
+                 fields.forEach(f => {
+                     var cell = row.insertCell(-1);
+                     cell.innerHTML = track[f];
+                 });      
+             });
+             // header row
+             var header = trackTable.createTHead();
+             var row = header.insertRow(0);
+             fields.forEach(f => {
+                 var cell = row.insertCell(-1);
+                 cell.innerHTML = f;
+             });
+         };
+        </script>
+        <%- include('partials/foot.ejs') -%>
+    </body>
+</html>

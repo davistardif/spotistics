@@ -113,10 +113,14 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
       headers: { 'Authorization': 'Bearer ' + access_token },
       responseType: 'json'
     });
-    tracks.push(...body.items);
+    let recvd_tracks = body.items.map(item => {
+      item.track["added_at"] = item["added_at"];
+      return item.track;
+    });
+    tracks.push(...recvd_tracks);
     nextUrl = body.next;
   }
-  res.send(tracks);
+  res.render("tracks", { tracks });
 });
 
 console.log("Listening on port " + constants.PORT);
