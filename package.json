@@ -2,8 +2,13 @@
   "name": "spotistics",
   "version": "0.1.0",
   "description": "A statistics client for Spotify",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davistardif/spotistics"
+  },
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Davis Tardif",
@@ -14,5 +19,6 @@
     "express": "^4.17.1",
     "got": "^11.7.0",
     "querystring": "^0.2.0"
-  }
+  },
+  "devDependencies": {}
 }
