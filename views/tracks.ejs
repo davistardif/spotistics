@@ -24,35 +24,58 @@
             </div>
         </div>
         <script>
-         var trackTable = document.getElementById("track-table");
+         var trackTableId = "track-table"
+         var trackTable = document.getElementById(trackTableId);
          var tracks = <%- JSON.stringify(tracks) %>;
          var fields = Object.keys(tracks[0]);
+         var hiddenFields = [];
          function humanify(str) {
              // replace _ -> space and capitalize words
              var words = str.replaceAll('_', ' ').split(' ');
              words = words.map(word => word.charAt(0).toUpperCase() + word.substr(1));
              return words.join(' ');
          }
-         window.onload = function() {
-             var cellWidth = Math.max(5, 100 / fields.length) + "%"
-             tracks.forEach(track => {
-                 var row = trackTable.insertRow(0);
+         function toggleField(f) {
+             var idx = fields.indexOf(f);
+             if (idx < 0) return;
+             var elems = trackTable.querySelectorAll("td:nth-child(" +
+                                                           (idx + 1) + ")");
+             var display;
+             if (hiddenFields.indexOf(f) == -1) {
+                 display = "none";
+             }
+             else {
+                 display = "auto";
+             }
+             elems.forEach(e => {
+                 e.style.display = display;
+             });
+         }
+             
+             window.onload = function () {
+                 var cellWidth = Math.max(5, 100 / (fields.length - hiddenFields.length)) + "%"
+                 // header row
+                 var header = trackTable.createTHead();
+                 var row = header.insertRow(0);
                  fields.forEach(f => {
                      var cell = row.insertCell(-1);
-                     cell.innerHTML = track[f];
-                     //cell.style.overflow = "hidden";
-                 });      
-             });
-             // header row
-             var header = trackTable.createTHead();
-             var row = header.insertRow(0);
-             fields.forEach(f => {
-                 var cell = row.insertCell(-1);
-                 cell.innerHTML = humanify(f);
-                 cell.style.width = cellWidth
-                 //cell.style.overflow = "hidden";
-             });
-         };
+                     cell.innerHTML = humanify(f);
+                     cell.style.width = cellWidth
+                     var hideBtn = document.createElement("BTN");
+                     hideBtn.className = "btn btn-primary btn-sm";
+                     hideBtn.onclick = () => toggleField(f);
+                     hideBtn.innerText = "Hide";
+                     cell.appendChild(hideBtn);
+                 });
+                 // table data
+                 tracks.forEach(track => {
+                     var row = trackTable.insertRow(-1);
+                     fields.forEach(f => {
+                         var cell = row.insertCell(-1);
+                         cell.innerHTML = track[f];                     
+                     });      
+                 });
+             };
         </script>
         <%- include('partials/foot.ejs') -%>
     </body>
