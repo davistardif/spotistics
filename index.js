@@ -115,6 +115,9 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
     });
     let recvd_tracks = body.items.map(item => {
       item.track["added_at"] = item["added_at"];
+      item.track["release_date"] = item.track.album["release_date"];
+      item.track.album = item.track.album.name;
+      item.track.artists = item.track.artists.map(obj => obj.name).join(", ");
       return item.track;
     });
     tracks.push(...recvd_tracks);
