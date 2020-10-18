@@ -24,6 +24,29 @@ function randomString(len) {
   return result;
 }
 
+function toHMSstring(ms) {
+  const hrs = Math.floor(ms / 3600000);
+  const mins = Math.floor(ms / 60000) % 60;
+  const secs = Math.floor(ms / 1000) % 60;
+  var res = "";
+  if (hrs > 0) {
+    res += hrs + ":";
+  }
+  if (hrs > 0 && mins < 10) {
+    res += "0" + mins + ":"
+  }
+  else {
+    res += mins + ":";
+  }
+  if (secs < 10) {
+    res += "0" + secs;
+  }
+  else {
+    res += secs;
+  }
+  return res;
+}
+
 // lookup spotify access_token from authKey cookie, returns false if not found
 function get_token(cookies) {
   if (cookies && cookies[authKey] && sessions[cookies[authKey]])
@@ -118,6 +141,7 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
       item.track["release_date"] = item.track.album["release_date"];
       item.track.album = item.track.album.name;
       item.track.artists = item.track.artists.map(obj => obj.name).join(", ");
+      item.track.duration = toHMSstring(item.track["duration_ms"]);
       return item.track;
     });
     tracks.push(...recvd_tracks);
