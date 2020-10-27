@@ -26,6 +26,12 @@
                     </table>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-10">
+                    <div id="histogram">
+                    </div>
+                </div>
+            </div>
         </div>
         <script>
          var trackTable = document.getElementById("track-table");
@@ -41,11 +47,10 @@
          }
          
          function toggleField(f) {
-             console.log("toggling " + f);
              var idx = fields.indexOf(f);
              if (idx < 0) return;
              var elems = trackTable.querySelectorAll("td:nth-child(" +
-                                                        (idx + 1) + ")");
+                                                         (idx + 1) + ")");
              var hfIdx = hiddenFields.indexOf(f);
              var isHidden = (hfIdx >= 0);
              if (isHidden) {
@@ -59,9 +64,7 @@
                  e.style.display = (isHidden ? "table-cell" : "none");
              });
              var row = document.getElementById("hidden-field-" + f);
-             console.log(row);
              row.style.display = (isHidden ? "none" : "table-row");
-             console.log(row);
          }
          
          function buildTrackTable () {
@@ -116,6 +119,48 @@
              initHiddenFields.forEach(f => toggleField(f));
          };
         </script>
+        <script src="https://d3js.org/d3.v4.js"></script>
+        <script>
+         var curField = "popularity";
+         var numBins = 10;
+         var margin = {top: 10, bottom: 50, left: 30, right: 30},
+             height = 500,
+             width = 500;
+         var svg = d3.select("#histogram")
+                     .append("svg")
+                     .attr("width", width + margin.left + margin.right)
+                     .attr("height", height + margin.top + margin.bottom)
+                     .append("g")
+                     .attr("transform",
+                           "translate(" + margin.left + "," + margin.top + ")");
+         var x = d3.scaleLinear()
+                   .domain([0, d3.max(tracks, t=> +t[curField])])
+                   .range([0, width])
+         svg.append("g")
+                   .attr("transform", "translate(0, " + height + ")")
+                   .call(d3.axisBottom(x))
+
+         var histogram = d3.histogram()
+                           .value(t => t[curField])
+                           .domain(x.domain())
+                           .thresholds(x.ticks(numBins));
+         var bins = histogram(tracks);
+         var y = d3.scaleLinear()
+                   .range([height, 0])
+                   .domain([0, d3.max(bins, d => d.length)]);
+         svg.append("g")
+            .call(d3.axisLeft(y));
+         svg.selectAll("rect")
+            .data(bins)
+            .enter()
+            .append("rect")
+            .attr("x", 1)
+            .attr("transform", d => "translate(" + x(d.x0) + "," + y(d.length) + ")")
+            .attr("width", d => x(d.x1) - x(d.x0) - 1)
+            .attr("height", d => height - y(d.length))
+            .style("fill", "#1111EE");
+        </script>
+            
         <%- include('partials/foot.ejs') -%>
     </body>
 </html>
