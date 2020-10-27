@@ -122,18 +122,12 @@ app.get('/playlists', async (req, res) => {
   res.render('playlists', { session: sessions[req.cookies[authKey]], playlists: body });
 });
 
-// Show tracks in a given playlist
-app.get('/playlist/:playlistId/tracks', async (req, res) => {
-  const playlistId = req.params.playlistId;
-  const access_token = get_token(req.cookies);
-  if (!access_token) {
-    res.send("Unauthorized!");
-  }
+async function getPlaylistTracks(playlistId, accessToken) {
   const tracks = []
   var nextUrl = constants.BASE_URL + '/playlists/' + playlistId + '/tracks'
   while (nextUrl) {
     const { body } = await got(nextUrl, {
-      headers: { 'Authorization': 'Bearer ' + access_token },
+      headers: { 'Authorization': 'Bearer ' + accessToken },
       responseType: 'json'
     });
     let recvd_tracks = body.items.map(item => {
@@ -147,8 +141,35 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
     tracks.push(...recvd_tracks);
     nextUrl = body.next;
   }
+  return tracks;
+}
+
+// Show table of tracks in a given playlist
+app.get('/playlist/:playlistId/tracks', async (req, res) => {
+  const playlistId = req.params.playlistId;
+  const accessToken = get_token(req.cookies);
+  if (!accessToken) {
+    res.send("Unauthorized!");
+  }
+  const tracks = await getPlaylistTracks(playlistId, accessToken);
   res.render("tracks", { tracks });
 });
 
+// Display stats for tracks in a playlist
+app.get('/playlist/:playlistId/stats', async (req, res) => {
+  const playlistId = req.params.playlistId;
+  const accessToken = get_token(req.cookies);
+  if (!accessToken) {
+    res.send("Unauthorized!");
+  }
+  const { body: playlist } = await got(constants.BASE_URL + '/playlists/' + playlistId, {
+    headers: { 'Authorization': 'Bearer ' + accessToken },
+    responseType: 'json'
+  });
+  
+  const tracks = await getPlaylistTracks(playlistId, accessToken);
+  res.render("stats", { playlist, tracks });
+});
+        
 console.log("Listening on port " + constants.PORT);
 app.listen(constants.PORT);

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <%- include('partials/head.ejs') -%>
+    </head>
+    <body>
+        <div id="root">
+            <div class="jumbotron">
+                <h2>Statistics for playlist <%= playlist.name %></h2>
+                <div class="row align-items-center">
+                    <div class="col-3">
+                        <img src="<%= playlist.images[0].url %>" height="100%" width="80%">
+                    </div>
+                    <div class="col-6">
+                        <table class="table-sm">
+                            <tr><td>Tracks:</td> <td><%= playlist.tracks.total %></td></tr>
+                            <tr><td>Followers:</td><td><%= playlist.followers.total %></td></tr>
+                            <tr><td>Collaborative:</td><td><%= playlist.collaborative %></td></tr>
+                            <tr><td>Public:</td><td><%= playlist.public %></td></tr>
+                        </table>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <script src="https://d3js.org/d3.v4.js"></script>
+        <script>
+         var tracks = <%- JSON.stringify(tracks) %>;
+         function buildHistogram(parentElem, field, toNumeric) {
+             var titleElem = document.createElement("h3");
+             titleElem.id = field + "-histogram-title";
+             titleElem.innerText = "Track " + humanify(field);
+             parentElem.appendChild(titleElem);
+             var histDiv = document.createElement("div");
+             histDiv.id = field + "-histogram";
+             parentElem.appendChild(histDiv);
+            
+             var numBins = Math.max(5, tracks.length / 10);
+             var binColor = "#5500FF"
+             var margin = {top: 10, bottom: 50, left: 30, right: 30},
+                 width = histDiv.offsetWidth,
+                 height = width;
+             var svg = d3.select("#" + field + "-histogram")
+                         .append("svg")
+                         .attr("width", width + margin.left + margin.right)
+                         .attr("height", height + margin.top + margin.bottom)
+                         .append("g")
+                         .attr("transform",
+                               "translate(" + margin.left + "," + margin.top + ")");
+             var x = d3.scaleLinear()
+                       .domain([0, d3.max(tracks, t=> toNumeric(t[field]))])
+                       .nice(numBins)
+                       .range([0, width])
+             svg.append("g")
+                       .attr("transform", "translate(0, " + height + ")")
+                       .call(d3.axisBottom(x))
+
+             var histogram = d3.histogram()
+                               .value(t => toNumeric(t[field]))
+                               .domain(x.domain())
+                               .thresholds(x.ticks(numBins));
+             var bins = histogram(tracks);
+             var y = d3.scaleLinear()
+                       .range([height, 0])
+                       .domain([0, d3.max(bins, d => d.length)]);
+             svg.append("g")
+                .call(d3.axisLeft(y));
+             svg.selectAll("rect")
+                .data(bins)
+                .enter()
+                .append("rect")
+                .attr("x", 1)
+                .attr("transform", d => "translate(" + x(d.x0) + "," + y(d.length) + ")")
+                .attr("width", d => x(d.x1) - x(d.x0) - 1)
+                .attr("height", d => height - y(d.length))
+                .style("fill", binColor);
+         }
+         window.onload = () => {
+             var root = document.getElementById("root");
+             var row = document.createElement("div")
+             row.className = "row";
+             root.appendChild(row);
+             var col = document.createElement("div");
+             col.className = "col-4";
+             row.appendChild(col);
+             buildHistogram(col, "popularity", x => x);
+         };
+        </script>
+        <%- include('partials/foot.ejs') -%>
+    </body>
+</html>
