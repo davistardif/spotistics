@@ -26,7 +26,7 @@
         <script src="https://d3js.org/d3.v4.js"></script>
         <script>
          var tracks = <%- JSON.stringify(tracks) %>;
-         function buildHistogram(parentElem, field, toNumeric) {
+         function buildHistogram(parentElem, field, toNumeric, fromNumeric) {
              var titleElem = document.createElement("h3");
              titleElem.id = field + "-histogram-title";
              titleElem.innerText = "Track " + humanify(field);
@@ -34,7 +34,7 @@
              var histDiv = document.createElement("div");
              histDiv.id = field + "-histogram";
              parentElem.appendChild(histDiv);
-            
+             
              var numBins = Math.max(5, tracks.length / 10);
              var binColor = "#5500FF"
              var margin = {top: 10, bottom: 50, left: 30, right: 30},
@@ -48,17 +48,21 @@
                          .attr("transform",
                                "translate(" + margin.left + "," + margin.top + ")");
              var x = d3.scaleLinear()
-                       .domain([0, d3.max(tracks, t=> toNumeric(t[field]))])
+                       .domain(d3.extent(tracks, t => toNumeric(t[field])))
                        .nice(numBins)
                        .range([0, width])
-             svg.append("g")
-                       .attr("transform", "translate(0, " + height + ")")
-                       .call(d3.axisBottom(x))
 
+             var xAxis = d3.axisBottom(x)
+                           .scale(x)
+                           .ticks(numBins)
+                           .tickFormat((d, i) => fromNumeric(d));
+             svg.append("g")
+                .attr("transform", "translate(0, " + height + ")")
+                .call(xAxis)
              var histogram = d3.histogram()
                                .value(t => toNumeric(t[field]))
                                .domain(x.domain())
-                               .thresholds(x.ticks(numBins));
+                               .thresholds(x.ticks(numBins))
              var bins = histogram(tracks);
              var y = d3.scaleLinear()
                        .range([height, 0])
@@ -83,7 +87,12 @@
              var col = document.createElement("div");
              col.className = "col-4";
              row.appendChild(col);
-             buildHistogram(col, "popularity", x => x);
+             buildHistogram(col, "popularity", x => x, x => x);
+             col = document.createElement("div");
+             col.className = "col-4";
+             row.appendChild(col);
+             buildHistogram(col, "release_date", x => Date.parse(x).valueOf(),
+                            x => new Date(x).getFullYear());
          };
         </script>
         <%- include('partials/foot.ejs') -%>
