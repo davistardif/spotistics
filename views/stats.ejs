@@ -54,7 +54,7 @@
 
              var xAxis = d3.axisBottom(x)
                            .scale(x)
-                           .ticks(numBins)
+                           .ticks(Math.min(10, numBins))
                            .tickFormat((d, i) => fromNumeric(d));
              svg.append("g")
                 .attr("transform", "translate(0, " + height + ")")
