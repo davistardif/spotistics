@@ -25,22 +25,49 @@
         </div>
         <script src="https://d3js.org/d3.v4.js"></script>
         <script>
+         // TODO: DRY this
+         function toHMSstring(ms) {
+             const hrs = Math.floor(ms / 3600000);
+             const mins = Math.floor(ms / 60000) % 60;
+             const secs = Math.floor(ms / 1000) % 60;
+             var res = "";
+             if (hrs > 0) {
+                 res += hrs + ":";
+             }
+             if (hrs > 0 && mins < 10) {
+                 res += "0" + mins + ":"
+             }
+             else {
+                 res += mins + ":";
+             }
+             if (secs < 10) {
+                 res += "0" + secs;
+             }
+             else {
+                 res += secs;
+             }
+             return res;
+         }
+        </script>
+        <script>
          var tracks = <%- JSON.stringify(tracks) %>;
-         function buildHistogram(parentElem, field, toNumeric, fromNumeric) {
-             var titleElem = document.createElement("h3");
-             titleElem.id = field + "-histogram-title";
-             titleElem.innerText = "Track " + humanify(field);
-             parentElem.appendChild(titleElem);
-             var histDiv = document.createElement("div");
-             histDiv.id = field + "-histogram";
-             parentElem.appendChild(histDiv);
+         function createHistogram(div, data, toLabel, height, width) {
+             /*
+                params:
+                div: a div to hold the histogram. should id, offsetWidth and offsetHeight defined
+                data: an array of numbers
+                toLabel: a function from numbers to labels for tick marks
+                height, width: in px
+
+                returns: a div containing the histogram
+              */
              
-             var numBins = Math.max(5, tracks.length / 10);
+             var numBins = Math.max(5, data.length / 10);
+             var numTicks = Math.min(5, numBins);
              var binColor = "#5500FF"
-             var margin = {top: 10, bottom: 50, left: 30, right: 30},
-                 width = histDiv.offsetWidth,
-                 height = width;
-             var svg = d3.select("#" + field + "-histogram")
+             var margin = {top: 10, bottom: 50, left: 30, right: 30};
+             
+             var svg = d3.select("#" + div.id)
                          .append("svg")
                          .attr("width", width + margin.left + margin.right)
                          .attr("height", height + margin.top + margin.bottom)
@@ -48,22 +75,22 @@
                          .attr("transform",
                                "translate(" + margin.left + "," + margin.top + ")");
              var x = d3.scaleLinear()
-                       .domain(d3.extent(tracks, t => toNumeric(t[field])))
+                       .domain(d3.extent(data))
                        .nice(numBins)
                        .range([0, width])
 
              var xAxis = d3.axisBottom(x)
                            .scale(x)
-                           .ticks(Math.min(10, numBins))
-                           .tickFormat((d, i) => fromNumeric(d));
+                           .ticks(numTicks)
+                           .tickFormat((d, i) => toLabel(d));
              svg.append("g")
                 .attr("transform", "translate(0, " + height + ")")
                 .call(xAxis)
              var histogram = d3.histogram()
-                               .value(t => toNumeric(t[field]))
+                               .value(d => d)
                                .domain(x.domain())
                                .thresholds(x.ticks(numBins))
-             var bins = histogram(tracks);
+             var bins = histogram(data);
              var y = d3.scaleLinear()
                        .range([height, 0])
                        .domain([0, d3.max(bins, d => d.length)]);
@@ -79,20 +106,89 @@
                 .attr("height", d => height - y(d.length))
                 .style("fill", binColor);
          }
+
+         function oneVarSummary(data, toLabel) {
+             var sum = 0;
+             var count = data.length;
+             data.forEach(d => {
+                 sum += d;
+             });
+             var mean = sum / count;
+             var std_dev = 0;
+             data.forEach(d => {
+                 std_dev += Math.pow((mean - d), 2);
+             });
+             std_dev = Math.sqrt(std_dev / count);
+             var sorted = [...data].sort((a, b) => a - b);
+             var median = (count % 2 == 0) ?
+                          (data[count/2] + data[count/2 - 1]) / 2 :
+                          data[Math.floor(count/2)];
+             return {
+                 count,
+                 mean,
+                 median,
+                 std_dev
+             }
+         }
+         
          window.onload = () => {
              var root = document.getElementById("root");
-             var row = document.createElement("div")
-             row.className = "row";
-             root.appendChild(row);
-             var col = document.createElement("div");
-             col.className = "col-4";
-             row.appendChild(col);
-             buildHistogram(col, "popularity", x => x, x => x);
-             col = document.createElement("div");
-             col.className = "col-4";
-             row.appendChild(col);
-             buildHistogram(col, "release_date", x => Date.parse(x).valueOf(),
-                            x => new Date(x).getFullYear());
+             var mdy_fmt = d3.timeFormat("%m/%d/%y")
+             var histograms = [
+                 {
+                     id: "popularity",
+                     data: tracks.map(x => x.popularity),
+                     toLabel: x => x
+                 },
+                 {
+                     id: "release_date",
+                     data: tracks.map(x => Date.parse(x.release_date)),
+                     toLabel: d =>(new Date(d)).getFullYear()
+                 },
+                 {
+                     id: "added_at",
+                     data: tracks.map(x => Date.parse(x.added_at)),
+                     toLabel: d => mdy_fmt(new Date(d))
+                 },
+                 {
+                     id: "duration",
+                     data: tracks.map(x => x.duration_ms),
+                     toLabel: d => toHMSstring(d) 
+                 }
+             ];
+             var row;
+             for (var i = 0; i < histograms.length; i++) {
+                 if (i % 3 == 0) {
+                     row = document.createElement("div");
+                     row.className = "row justify-content-around";
+                     root.appendChild(row);
+                 }
+                 var col = document.createElement("div");
+                 col.className = "col-4";
+                 row.appendChild(col);
+                 var { id, data, toLabel } = histograms[i];
+                 var titleElem = document.createElement("h3");
+                 titleElem.id = id + "-histogram-title";
+                 titleElem.innerText = "Track " + humanify(id);
+                 col.appendChild(titleElem);
+                 var histDiv = document.createElement("div");
+                 histDiv.id = id + "-histogram";
+                 col.appendChild(histDiv);
+                 createHistogram(histDiv, data, toLabel, histDiv.offsetWidth, histDiv.offsetWidth);
+                 var substats = document.createElement("p");
+                 var summary = oneVarSummary(data, toLabel);
+                 delete summary.count;
+                 summary.mean = toLabel(summary.mean);
+                 summary.median = toLabel(summary.median);
+                 if (id == "added_at" || id == "release_date") {
+                     summary.std_dev = summary.std_dev / (1000 * 60 * 60 * 24) + " days";
+                 }
+                 else {
+                     summary.std_dev = toLabel(summary.std_dev)
+                 }
+                 substats.innerText = Object.entries(summary).map(([k, v]) => humanify(k) + ": " + v).join("\n");
+                 col.appendChild(substats);
+             }
          };
         </script>
         <%- include('partials/foot.ejs') -%>
