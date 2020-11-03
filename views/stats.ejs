@@ -133,7 +133,8 @@
          
          window.onload = () => {
              var root = document.getElementById("root");
-             var mdy_fmt = d3.timeFormat("%m/%d/%y")
+             var mdy_fmt = d3.timeFormat("%m/%d/%y");
+             var tonalKeys = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
              var histograms = [
                  {
                      id: "popularity",
@@ -154,6 +155,69 @@
                      id: "duration",
                      data: tracks.map(x => x.duration_ms),
                      toLabel: d => toHMSstring(d) 
+                 },
+                 {
+                     id: "acousticness",
+                     data: tracks.map(x => x.acousticness),
+                     toLabel: x => x
+                 },
+                 {
+                     id: "danceability",
+                     data: tracks.map(x => x.danceability),
+                     toLabel: x => x
+                 },
+                 {
+                     id: "energy",
+                     data: tracks.map(x => x.energy),
+                     toLabel: x => x
+                 },
+                 {
+                     id: "instrumentalness",
+                     data: tracks.map(x => x.instrumentalness),
+                     toLabel: x => x
+                 },
+                 {
+                     // todo: bar chart this
+                     id: "key",
+                     data: tracks.map(x => x.key),
+                     toLabel: i => tonalKeys[i]
+                 },
+                 {
+                     id: "liveness",
+                     data: tracks.map(x => x.liveness),
+                     toLabel: i => i
+                 },
+                 {
+                     id: "loudness",
+                     data: tracks.map(x => x.loudness),
+                     toLabel: x => x + "dB"
+                 },
+                 {
+                     // todo: bar chart this
+                     id: "mode",
+                     data: tracks.map(x => x.mode),
+                     toLabel: x => (x ? "Major" : "Minor")
+                 },
+                 {
+                     id: "speechiness",
+                     data: tracks.map(x => x.speechiness),
+                     toLabel: x => x
+                 },
+                 {
+                     id: "tempo",
+                     data: tracks.map(x => x.tempo),
+                     toLabel: x => x + "bpm"
+                 },
+                 {
+                     // todo: bar chart this
+                     id: "time_signature",
+                     data: tracks.map(x => x.time_signature),
+                     toLabel: x => x + "/4"
+                 },
+                 {
+                     id: "positivity",
+                     data: tracks.map(x => x.valence),
+                     toLabel: x => x
                  }
              ];
              var row;

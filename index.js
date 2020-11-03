@@ -104,7 +104,7 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
     headers: { 'Authorization': 'Bearer ' + accessToken },
     responseType: 'json'
   });
-  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total);
+  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total, true);
   res.render("tracks", { tracks, playlist });
 });
 
@@ -120,7 +120,7 @@ app.get('/playlist/:playlistId/stats', async (req, res) => {
     responseType: 'json'
   });
   
-  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total);
+  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total, true);
   res.render("stats", { playlist, tracks });
 });
         
