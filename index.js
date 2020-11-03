@@ -5,6 +5,9 @@ const cookieParser = require('cookie-parser');
 
 const { sessions, Session } = require('./session');
 const constants = require('./constants');
+const utils = require('./utils');
+
+const { getPlaylistTracks } = require('./tracks');
 
 const app = express();
 app.use(cookieParser());
@@ -13,39 +16,6 @@ app.set('view engine', 'ejs'); // render views in /views subdir with ejs
 // cookie keys
 const stateKey = 'spotify_auth_state';
 const authKey = 'spotify_auth';
-
-function randomString(len) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890';
-  const charsLen = chars.length;
-  let result = '';
-  for (let i = 0; i < len; i++) {
-    result += chars.charAt(Math.floor(Math.random() * charsLen));
-  }
-  return result;
-}
-
-function toHMSstring(ms) {
-  const hrs = Math.floor(ms / 3600000);
-  const mins = Math.floor(ms / 60000) % 60;
-  const secs = Math.floor(ms / 1000) % 60;
-  var res = "";
-  if (hrs > 0) {
-    res += hrs + ":";
-  }
-  if (hrs > 0 && mins < 10) {
-    res += "0" + mins + ":"
-  }
-  else {
-    res += mins + ":";
-  }
-  if (secs < 10) {
-    res += "0" + secs;
-  }
-  else {
-    res += secs;
-  }
-  return res;
-}
 
 // lookup spotify access_token from authKey cookie, returns false if not found
 function get_token(cookies) {
@@ -62,7 +32,7 @@ app.get("/", (req, res) => {
 
 // login to spotify
 app.get('/login', (req, res) => {
-  const state = randomString(20);
+  const state = utils.randomString(20);
   res.cookie(stateKey, state)
   const scope = 'playlist-read-private user-library-read user-read-recently-played';
   res.redirect('https://accounts.spotify.com/authorize?' +
@@ -95,7 +65,7 @@ app.get(constants.REDIRECT_PATH, async (req, res) => {
                                     headers: constants.CLIENT_AUTH_HEADER,
                                     responseType: 'json'
                                   });
-  const authCookie = randomString(35);
+  const authCookie = utils.randomString(35);
   res.cookie(authKey, authCookie);
   const s = new Session(authCookie, body.access_token, body.refresh_token);
   await s.init();
@@ -122,27 +92,6 @@ app.get('/playlists', async (req, res) => {
   res.render('playlists', { session: sessions[req.cookies[authKey]], playlists: body });
 });
 
-async function getPlaylistTracks(playlistId, accessToken) {
-  const tracks = []
-  var nextUrl = constants.BASE_URL + '/playlists/' + playlistId + '/tracks'
-  while (nextUrl) {
-    const { body } = await got(nextUrl, {
-      headers: { 'Authorization': 'Bearer ' + accessToken },
-      responseType: 'json'
-    });
-    let recvd_tracks = body.items.map(item => {
-      item.track["added_at"] = item["added_at"];
-      item.track["release_date"] = item.track.album["release_date"];
-      item.track.album = item.track.album.name;
-      item.track.artists = item.track.artists.map(obj => obj.name).join(", ");
-      item.track.duration = toHMSstring(item.track["duration_ms"]);
-      return item.track;
-    });
-    tracks.push(...recvd_tracks);
-    nextUrl = body.next;
-  }
-  return tracks;
-}
 
 // Show table of tracks in a given playlist
 app.get('/playlist/:playlistId/tracks', async (req, res) => {
@@ -151,8 +100,12 @@ app.get('/playlist/:playlistId/tracks', async (req, res) => {
   if (!accessToken) {
     res.send("Unauthorized!");
   }
-  const tracks = await getPlaylistTracks(playlistId, accessToken);
-  res.render("tracks", { tracks });
+  const { body: playlist } = await got(constants.BASE_URL + '/playlists/' + playlistId, {
+    headers: { 'Authorization': 'Bearer ' + accessToken },
+    responseType: 'json'
+  });
+  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total);
+  res.render("tracks", { tracks, playlist });
 });
 
 // Display stats for tracks in a playlist
@@ -167,7 +120,7 @@ app.get('/playlist/:playlistId/stats', async (req, res) => {
     responseType: 'json'
   });
   
-  const tracks = await getPlaylistTracks(playlistId, accessToken);
+  const tracks = await getPlaylistTracks(playlistId, accessToken, playlist.tracks.total);
   res.render("stats", { playlist, tracks });
 });
         
