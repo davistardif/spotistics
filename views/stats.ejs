@@ -54,19 +54,17 @@
          function createHistogram(div, data, toLabel, height, width) {
              /*
                 params:
-                div: a div to hold the histogram. should id, offsetWidth and offsetHeight defined
+                div: a div to hold the histogram. should have a unique id
                 data: an array of numbers
                 toLabel: a function from numbers to labels for tick marks
                 height, width: in px
-
-                returns: a div containing the histogram
               */
-             
              var numBins = Math.max(5, data.length / 10);
              var numTicks = Math.min(5, numBins);
              var binColor = "#5500FF"
              var margin = {top: 10, bottom: 50, left: 30, right: 30};
-             
+             width -= margin.left + margin.right;
+             height -= margin.top + margin.bottom;
              var svg = d3.select("#" + div.id)
                          .append("svg")
                          .attr("width", width + margin.left + margin.right)
@@ -104,6 +102,63 @@
                 .attr("transform", d => "translate(" + x(d.x0) + "," + y(d.length) + ")")
                 .attr("width", d => x(d.x1) - x(d.x0) - 1)
                 .attr("height", d => height - y(d.length))
+                .style("fill", binColor);
+         }
+
+         function createBarChart(div, data, height, width) {
+             /*
+                params:
+                div: a div to hold the graph. should have a unique id
+                data: an array of strings
+                height, width: in px
+              */
+             
+             var binColor = "#5500FF"
+             var margin = {top: 10, bottom: 50, left: 30, right: 30};
+             width -= margin.left + margin.right;
+             height -= margin.top + margin.bottom;
+             counts = {}
+             maxCount = 0
+             data.forEach(d => {
+                 const count = (counts[d] || 0) + 1;
+                 if (count > maxCount) {
+                     maxCount = count;
+                 }
+                 counts[d] = count;
+             });
+             data = Object.entries(counts).sort((x, y) => y[1] - x[1]);
+             var svg = d3.select("#" + div.id)
+                         .append("svg")
+                         .attr("width", width + margin.left + margin.right)
+                         .attr("height", height + margin.top + margin.bottom)
+                         .append("g")
+                         .attr("transform",
+                               "translate(" + margin.left + "," + margin.top + ")");
+             var x = d3.scaleBand()
+                       .range([0, width])
+                       .domain(data.map(d => d[0]))
+                       .padding(0.2)
+
+             svg.append("g")
+                       .attr("transform", "translate(0, " + height + ")")
+                       .call(d3.axisBottom(x))
+                       .selectAll("text")
+                       .attr("transform", "translate(-10,0)rotate(-45)")
+                       .style("text-anchor", "end");
+             var y = d3.scaleLinear()
+                       .domain([0, maxCount])
+                       .range([height, 0])
+             
+             svg.append("g")
+                       .call(d3.axisLeft(y));
+             svg.selectAll("rect")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("x", d => x(d[0]))
+                .attr("y", d => y(d[1]))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - y(d[1]))
                 .style("fill", binColor);
          }
 
@@ -177,10 +232,8 @@
                      toLabel: x => x
                  },
                  {
-                     // todo: bar chart this
                      id: "key",
-                     data: tracks.map(x => x.key),
-                     toLabel: i => tonalKeys[i]
+                     data: tracks.map(x => tonalKeys[x.key])
                  },
                  {
                      id: "liveness",
@@ -193,10 +246,8 @@
                      toLabel: x => x + "dB"
                  },
                  {
-                     // todo: bar chart this
                      id: "mode",
-                     data: tracks.map(x => x.mode),
-                     toLabel: x => (x ? "Major" : "Minor")
+                     data: tracks.map(x => (x.mode ? "Major" : "Minor"))
                  },
                  {
                      id: "speechiness",
@@ -209,10 +260,8 @@
                      toLabel: x => x + "bpm"
                  },
                  {
-                     // todo: bar chart this
                      id: "time_signature",
-                     data: tracks.map(x => x.time_signature),
-                     toLabel: x => x + "/4"
+                     data: tracks.map(x => x.time_signature + "/4")
                  },
                  {
                      id: "positivity",
@@ -232,26 +281,34 @@
                  row.appendChild(col);
                  var { id, data, toLabel } = histograms[i];
                  var titleElem = document.createElement("h3");
-                 titleElem.id = id + "-histogram-title";
+                 titleElem.id = id + "-chart-title";
                  titleElem.innerText = "Track " + humanify(id);
                  col.appendChild(titleElem);
-                 var histDiv = document.createElement("div");
-                 histDiv.id = id + "-histogram";
-                 col.appendChild(histDiv);
-                 createHistogram(histDiv, data, toLabel, histDiv.offsetWidth, histDiv.offsetWidth);
-                 var substats = document.createElement("p");
-                 var summary = oneVarSummary(data, toLabel);
-                 delete summary.count;
-                 summary.mean = toLabel(summary.mean);
-                 summary.median = toLabel(summary.median);
-                 if (id == "added_at" || id == "release_date") {
-                     summary.std_dev = summary.std_dev / (1000 * 60 * 60 * 24) + " days";
+                 if (id == "key" || id == "mode" || id == "time_signature") {
+                     var chartDiv = document.createElement("div");
+                     chartDiv.id = id + "-chart";
+                     col.append(chartDiv);
+                     createBarChart(chartDiv, data, chartDiv.offsetWidth, chartDiv.offsetWidth);
                  }
                  else {
-                     summary.std_dev = toLabel(summary.std_dev)
+                     var histDiv = document.createElement("div");   
+                     histDiv.id = id + "-histogram";
+                     col.appendChild(histDiv);
+                     createHistogram(histDiv, data, toLabel, histDiv.offsetWidth, histDiv.offsetWidth);
+                     var substats = document.createElement("p");
+                     var summary = oneVarSummary(data, toLabel);
+                     delete summary.count;
+                     summary.mean = toLabel(summary.mean);
+                     summary.median = toLabel(summary.median);
+                     if (id == "added_at" || id == "release_date") {
+                         summary.std_dev = summary.std_dev / (1000 * 60 * 60 * 24) + " days";
+                     }
+                     else {
+                         summary.std_dev = toLabel(summary.std_dev)
+                     }
+                     substats.innerText = Object.entries(summary).map(([k, v]) => humanify(k) + ": " + v).join("\n");
+                     col.appendChild(substats);
                  }
-                 substats.innerText = Object.entries(summary).map(([k, v]) => humanify(k) + ": " + v).join("\n");
-                 col.appendChild(substats);
              }
          };
         </script>
